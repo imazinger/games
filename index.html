@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>games</title>
+<style>
+  :root{
+    --bg: #FBF6EC;
+    --panel: #FFFFFF;
+    --border: #E4DCC8;
+    --border-strong: #D3C7A8;
+    --text: #4A3F2E;
+    --text-muted: #8A7F6A;
+    --accent: #D8863E;
+    --accent-dark: #A85F22;
+  }
+  * { box-sizing: border-box; }
+  body{
+    margin:0;
+    font-family: "Hiragino Maru Gothic ProN","Yu Gothic",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 40px 16px 60px;
+  }
+  .wrap{ max-width: 720px; margin: 0 auto; }
+  h1{
+    font-size: 26px;
+    font-weight: 700;
+    text-align:center;
+    margin: 4px 0 8px;
+    color: var(--accent-dark);
+  }
+  p.sub{
+    text-align:center;
+    color: var(--text-muted);
+    font-size: 14px;
+    margin: 0 0 32px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  a.game-card{
+    display:flex;
+    align-items:center;
+    gap: 14px;
+    background: var(--panel);
+    border: 1.5px solid var(--border-strong);
+    border-radius: 14px;
+    padding: 16px 18px;
+    text-decoration:none;
+    color: var(--text);
+    box-shadow: 0 1px 3px rgba(80,60,20,0.1);
+    transition: transform 0.1s, box-shadow 0.15s;
+  }
+  a.game-card:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(80,60,20,0.18);
+    border-color: var(--accent);
+  }
+  .icon{
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #F0E4CF;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    font-size: 22px;
+  }
+  .meta{ min-width:0; }
+  .meta .name{
+    font-weight: 600;
+    font-size: 15px;
+    margin: 0 0 2px;
+  }
+  .meta .desc{
+    font-size: 12px;
+    color: var(--text-muted);
+    margin:0;
+  }
+  .empty{
+    text-align:center;
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 24px;
+  }
+  footer{
+    text-align:center;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 40px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>games</h1>
+  <p class="sub">ここに公開したミニゲームを並べています</p>
+  <div class="grid" id="grid"></div>
+  <footer>New game を追加するときは、下の GAMES 配列に1行足すだけです。</footer>
+</div>
+
+<script>
+  const GAMES = [
+    { path: "kuma-freecell/", icon: "🐻", name: "くまのフリーセル", desc: "40枚のカードで遊ぶソリティア" }
+    // ここに追加していく: { path: "next-game/", icon: "🎲", name: "次のゲーム", desc: "説明" }
+  ];
+
+  const grid = document.getElementById("grid");
+  if(GAMES.length === 0){
+    grid.innerHTML = '<div class="empty">まだゲームがありません</div>';
+  } else {
+    GAMES.forEach(g=>{
+      const a = document.createElement("a");
+      a.className = "game-card";
+      a.href = g.path;
+      a.innerHTML = `
+        <div class="icon">${g.icon || "🎮"}</div>
+        <div class="meta">
+          <p class="name">${g.name}</p>
+          <p class="desc">${g.desc || ""}</p>
+        </div>
+      `;
+      grid.appendChild(a);
+    });
+  }
+</script>
+</body>
+</html>
