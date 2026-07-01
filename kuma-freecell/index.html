@@ -73,6 +73,13 @@
     font-weight: 600;
   }
   button.primary:hover{ background: var(--accent-dark); }
+  button.active{
+    background: var(--success-bg);
+    border-color: #8FBF63;
+    color: var(--success-text);
+    font-weight: 600;
+  }
+  button.active:hover{ background: #DEEDC9; }
 
   .win-banner{
     background: var(--success-bg);
@@ -144,6 +151,7 @@
     z-index: 1000;
     box-shadow: 0 10px 24px rgba(80,60,20,0.35);
     will-change: transform;
+    transition: none;
   }
 
   .empty-slot{
@@ -301,6 +309,7 @@ let state;
 
 function newGame(){
   const deck = makeDeck();
+  const keepHintOn = state ? state.hintOn : false;
   state = {
     cols: dealColumns(deck, NUM_COLS),
     free: Array(NUM_FREE).fill(null),
@@ -309,7 +318,8 @@ function newGame(){
     moves: 0,
     won: false,
     hint: null,
-    hintMessage: ""
+    hintMessage: "",
+    hintOn: keepHintOn
   };
   render();
 }
@@ -377,8 +387,6 @@ function performMove(from, to){
   const moved = attemptMove(from, to, card);
   if(moved){
     state.moves += 1;
-    state.hint = null;
-    state.hintMessage = "";
     if(checkWin()) state.won = true;
   }
   return moved;
@@ -418,8 +426,6 @@ function findAutoFoundationIndex(card){
 }
 
 function autoFoundation(){
-  state.hint = null;
-  state.hintMessage = "";
   let changed = true;
   while(changed){
     changed = false;
@@ -524,7 +530,17 @@ function hintMessageText(hint){
   return "緑のカードを、オレンジの場所に移動してみましょう。";
 }
 
-function showHint(){
+function toggleHint(){
+  state.hintOn = !state.hintOn;
+  render();
+}
+
+function updateHintDisplay(){
+  if(!state.hintOn || state.won){
+    state.hint = null;
+    state.hintMessage = "";
+    return;
+  }
   const hint = findHint();
   if(!hint){
     state.hint = null;
@@ -533,7 +549,6 @@ function showHint(){
     state.hint = hint;
     state.hintMessage = hintMessageText(hint);
   }
-  render();
 }
 
 function isSelected(loc){
@@ -581,7 +596,13 @@ function emptySlotEl(loc, label){
 }
 
 function render(){
+  updateHintDisplay();
+
   document.getElementById("movesLabel").textContent = "手数: " + state.moves;
+
+  const hintBtn = document.getElementById("hintBtn");
+  hintBtn.textContent = state.hintOn ? "ヒント: ON" : "ヒント";
+  hintBtn.classList.toggle("active", !!state.hintOn);
 
   const hintMsgEl = document.getElementById("hintMsg");
   if(state.hintMessage){
@@ -646,7 +667,7 @@ function render(){
   });
 }
 
-document.getElementById("hintBtn").addEventListener("click", showHint);
+document.getElementById("hintBtn").addEventListener("click", toggleHint);
 document.getElementById("autoBtn").addEventListener("click", autoFoundation);
 
 let dragState = null;
@@ -677,6 +698,7 @@ function startGhost(){
   ghost.className = "card drag-ghost";
   ghost.style.width = dragState.width + "px";
   ghost.style.height = dragState.height + "px";
+  ghost.style.transition = "none";
   document.body.appendChild(ghost);
   dragState.ghost = ghost;
   dragState.sourceEl.classList.add("dragging-source");
@@ -689,28 +711,68 @@ function moveGhost(x, y){
   dragState.ghost.style.transform = "translate(" + left + "px, " + top + "px) rotate(-4deg) scale(1.05)";
 }
 
-function findDropLoc(x, y){
-  const el = document.elementFromPoint(x, y);
-  if(!el) return null;
-  const target = el.closest("[data-loc-type]");
-  if(!target) return null;
-  return { type: target.dataset.locType, index: Number(target.dataset.locIndex) };
+function collectDropZones(){
+  const zones = [];
+  document.querySelectorAll("#tableau .col").forEach(el=>{
+    const target = el.lastElementChild || el;
+    zones.push({ loc:{type:"col", index:Number(el.dataset.locIndex)}, rect: target.getBoundingClientRect() });
+  });
+  document.querySelectorAll("#freeRow > [data-loc-type]").forEach(el=>{
+    zones.push({ loc:{type:"free", index:Number(el.dataset.locIndex)}, rect: el.getBoundingClientRect() });
+  });
+  document.querySelectorAll("#foundRow > [data-loc-type]").forEach(el=>{
+    zones.push({ loc:{type:"found", index:Number(el.dataset.locIndex)}, rect: el.getBoundingClientRect() });
+  });
+  return zones;
+}
+
+function findNearestDropZone(x, y){
+  const zones = collectDropZones();
+  let best = null, bestDist = Infinity;
+  zones.forEach(z=>{
+    const cx = z.rect.left + z.rect.width / 2;
+    const cy = z.rect.top + z.rect.height / 2;
+    const d = Math.hypot(x - cx, y - cy);
+    if(d < bestDist){ bestDist = d; best = z; }
+  });
+  return best;
 }
 
 function endDrag(x, y){
   if(!dragState) return;
-  const wasMoved = dragState.moved;
   const from = dragState.from;
-  if(dragState.ghost) dragState.ghost.remove();
-  if(dragState.sourceEl) dragState.sourceEl.classList.remove("dragging-source");
+  const wasMoved = dragState.moved;
+  const ghost = dragState.ghost;
+  const sourceEl = dragState.sourceEl;
+  const width = dragState.width;
+  const height = dragState.height;
   dragState = null;
-  if(wasMoved){
-    const dropLoc = findDropLoc(x, y);
-    if(dropLoc) performMove(from, dropLoc);
+  if(sourceEl) sourceEl.classList.remove("dragging-source");
+
+  if(!wasMoved){
+    if(ghost) ghost.remove();
+    trySelect(from);
+    return;
+  }
+
+  const zone = findNearestDropZone(x, y);
+
+  const finish = ()=>{
+    if(ghost) ghost.remove();
+    if(zone) performMove(from, zone.loc);
     state.selected = null;
     render();
+  };
+
+  if(ghost && zone){
+    const targetLeft = zone.rect.left + (zone.rect.width - width) / 2;
+    const targetTop = zone.rect.top + (zone.rect.height - height) / 2;
+    ghost.style.transition = "transform 0.14s ease-out";
+    void ghost.offsetWidth;
+    ghost.style.transform = "translate(" + targetLeft + "px, " + targetTop + "px) scale(1)";
+    setTimeout(finish, 150);
   } else {
-    trySelect(from);
+    finish();
   }
 }
 
