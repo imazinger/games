@@ -125,6 +125,8 @@
     box-shadow: 0 6px 14px rgba(80,60,20,0.28);
   }
   .card.dim{ cursor: default; }
+  .card.draggable{ touch-action: none; cursor: grab; }
+  .card.dragging-source{ opacity: 0.25; }
   .card.joker{ border-color: #C99A2E; }
   .card.joker::after{
     content: "";
@@ -133,6 +135,15 @@
     border: 2px solid #F0C24A;
     border-radius: 6px;
     pointer-events:none;
+  }
+  .drag-ghost{
+    position: fixed;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 10px 24px rgba(80,60,20,0.35);
+    will-change: transform;
   }
 
   .empty-slot{
@@ -237,7 +248,7 @@
   <div class="tableau" id="tableau"></div>
 
   <footer>
-    カードをタップして選択 → 置きたい場所をもう一度タップで移動。<br>
+    カードはドラッグ&amp;ドロップで移動できます(タップして選択 → もう一度タップで移動、でもOKです)。<br>
     タブローでは「1つ小さい数字(A&lt;B&lt;C…&lt;I)」のカードだけ重ねられます(絵柄は関係ありません)。<br>
     フリーセルには何でも1枚だけ一時的に置けます。ファウンデーションはA→Iの順に積んでいき、最後にJ(万能札)を置くとその山は完成です。<br>
     困ったら「ヒント」ボタンで、動かせるカード(緑)と置き場所(オレンジ)が光ります。
@@ -358,10 +369,23 @@ function checkWin(){
   return state.found.every(n => n === RANKS.length + 1);
 }
 
+function performMove(from, to){
+  const card = getCard(from);
+  if(!card) return false;
+  const sameSpot = from.type === to.type && from.index === to.index;
+  if(sameSpot) return false;
+  const moved = attemptMove(from, to, card);
+  if(moved){
+    state.moves += 1;
+    state.hint = null;
+    state.hintMessage = "";
+    if(checkWin()) state.won = true;
+  }
+  return moved;
+}
+
 function trySelect(loc){
   if(state.won) return;
-  state.hint = null;
-  state.hintMessage = "";
   if(!state.selected){
     const card = getCard(loc);
     if(!card) return;
@@ -372,31 +396,17 @@ function trySelect(loc){
   const from = state.selected;
   const sameSpot = from.type === loc.type && from.index === loc.index;
   if(sameSpot){ state.selected = null; render(); return; }
-  const card = getCard(from);
-  if(!card){ state.selected = null; render(); return; }
-  const moved = attemptMove(from, loc, card);
+  performMove(from, loc);
   state.selected = null;
-  if(moved){
-    state.moves += 1;
-    if(checkWin()) state.won = true;
-  }
   render();
 }
 
 function trySelectFoundation(pileIndex){
   if(state.won) return;
-  state.hint = null;
-  state.hintMessage = "";
   if(!state.selected) return;
   const from = state.selected;
-  const card = getCard(from);
-  if(!card){ state.selected = null; render(); return; }
-  const moved = attemptMove(from, {type:"found", index:pileIndex}, card);
+  performMove(from, {type:"found", index:pileIndex});
   state.selected = null;
-  if(moved){
-    state.moves += 1;
-    if(checkWin()) state.won = true;
-  }
   render();
 }
 
@@ -541,16 +551,19 @@ function cardEl(card, loc, opts){
     if(locEq(state.hint.from, loc)) cls += " hint-from";
     if(locEq(state.hint.to, loc)) cls += " hint-to";
   }
+  const draggable = !opts.dim && !opts.onFoundationClick;
+  if(draggable) cls += " draggable";
   div.className = cls;
+  div.dataset.locType = loc.type;
+  div.dataset.locIndex = String(loc.index);
   const img = document.createElement("img");
   img.src = CARD_IMAGES[card.rank];
   img.alt = card.rank;
   div.appendChild(img);
-  if(!opts.dim){
-    div.addEventListener("click", ()=> {
-      if(opts.onFoundationClick) opts.onFoundationClick();
-      else trySelect(loc);
-    });
+  if(opts.onFoundationClick){
+    div.addEventListener("click", opts.onFoundationClick);
+  } else if(draggable){
+    attachDrag(div, loc);
   }
   return div;
 }
@@ -560,6 +573,8 @@ function emptySlotEl(loc, label){
   let cls = "empty-slot";
   if(state.hint && locEq(state.hint.to, loc)) cls += " hint-to";
   div.className = cls;
+  div.dataset.locType = loc.type;
+  div.dataset.locIndex = String(loc.index);
   div.textContent = label || "";
   div.addEventListener("click", ()=> trySelect(loc));
   return div;
@@ -616,6 +631,8 @@ function render(){
   state.cols.forEach((col, ci)=>{
     const colDiv = document.createElement("div");
     colDiv.className = "col";
+    colDiv.dataset.locType = "col";
+    colDiv.dataset.locIndex = String(ci);
     if(col.length === 0){
       colDiv.appendChild(emptySlotEl({type:"col", index:ci}));
     } else {
@@ -631,6 +648,97 @@ function render(){
 
 document.getElementById("hintBtn").addEventListener("click", showHint);
 document.getElementById("autoBtn").addEventListener("click", autoFoundation);
+
+let dragState = null;
+
+function attachDrag(el, loc){
+  el.addEventListener("pointerdown", (e)=>{
+    if(state.won) return;
+    if(e.button !== undefined && e.button !== 0) return;
+    const rect = el.getBoundingClientRect();
+    dragState = {
+      from: loc,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
+      moved: false,
+      ghost: null,
+      sourceEl: el
+    };
+  });
+}
+
+function startGhost(){
+  const ghost = dragState.sourceEl.cloneNode(true);
+  ghost.className = "card drag-ghost";
+  ghost.style.width = dragState.width + "px";
+  ghost.style.height = dragState.height + "px";
+  document.body.appendChild(ghost);
+  dragState.ghost = ghost;
+  dragState.sourceEl.classList.add("dragging-source");
+}
+
+function moveGhost(x, y){
+  if(!dragState.ghost) return;
+  const left = x - dragState.offsetX;
+  const top = y - dragState.offsetY;
+  dragState.ghost.style.transform = "translate(" + left + "px, " + top + "px) rotate(-4deg) scale(1.05)";
+}
+
+function findDropLoc(x, y){
+  const el = document.elementFromPoint(x, y);
+  if(!el) return null;
+  const target = el.closest("[data-loc-type]");
+  if(!target) return null;
+  return { type: target.dataset.locType, index: Number(target.dataset.locIndex) };
+}
+
+function endDrag(x, y){
+  if(!dragState) return;
+  const wasMoved = dragState.moved;
+  const from = dragState.from;
+  if(dragState.ghost) dragState.ghost.remove();
+  if(dragState.sourceEl) dragState.sourceEl.classList.remove("dragging-source");
+  dragState = null;
+  if(wasMoved){
+    const dropLoc = findDropLoc(x, y);
+    if(dropLoc) performMove(from, dropLoc);
+    state.selected = null;
+    render();
+  } else {
+    trySelect(from);
+  }
+}
+
+document.addEventListener("pointermove", (e)=>{
+  if(!dragState || e.pointerId !== dragState.pointerId) return;
+  const dx = e.clientX - dragState.startX;
+  const dy = e.clientY - dragState.startY;
+  if(!dragState.moved && Math.hypot(dx, dy) > 6){
+    dragState.moved = true;
+    startGhost();
+  }
+  if(dragState.moved){
+    e.preventDefault();
+    moveGhost(e.clientX, e.clientY);
+  }
+}, { passive: false });
+
+document.addEventListener("pointerup", (e)=>{
+  if(!dragState || e.pointerId !== dragState.pointerId) return;
+  endDrag(e.clientX, e.clientY);
+});
+
+document.addEventListener("pointercancel", (e)=>{
+  if(!dragState || e.pointerId !== dragState.pointerId) return;
+  if(dragState.ghost) dragState.ghost.remove();
+  if(dragState.sourceEl) dragState.sourceEl.classList.remove("dragging-source");
+  dragState = null;
+});
 
 let touchStartY = 0;
 document.body.addEventListener("touchstart", (e)=>{
