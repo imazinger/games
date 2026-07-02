@@ -14,6 +14,7 @@ const sound = new Sound();
 let game = new Game();
 let pendingResult = null;
 let resultTimer = 0;
+let paused = false;
 
 // 描画用のビュー状態(ロジックとは分離)
 const view = {
@@ -28,8 +29,20 @@ const view = {
 const hud = new HUD({
   onRewind: attemptRewind,
   onRestart: restart,
+  onPause: openPauseMenu,
   onMute: () => { sound.muted = !sound.muted; return sound.muted; },
 });
+
+// ⏸ 一時停止メニュー(スタート・リザルト表示中は無視)
+function openPauseMenu() {
+  if (paused || hud.overlayVisible) return;
+  paused = true;
+  view.grabbing = false;
+  hud.showPause([
+    { label: 'やりなおす', action: () => { paused = false; restart(); } },
+    { label: 'つづける', primary: true, action: () => { hud.hideOverlay(); paused = false; } },
+  ]);
+}
 
 function grid() { return renderer.layout.grid; }
 function pieceTargetX() { return grid().x + game.active.col * grid().cell; }
@@ -214,6 +227,14 @@ function frame(now) {
   last = now;
 
   renderer.resizeIfNeeded();
+
+  if (paused) {
+    // 一時停止中: ロジック・演出を進めず静止画を描くだけ
+    hud.update(game);
+    renderer.draw(game, effects, view, now / 1000);
+    requestAnimationFrame(frame);
+    return;
+  }
 
   if (view.pieceX === null && game.active) view.pieceX = pieceTargetX();
 

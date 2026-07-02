@@ -9,14 +9,14 @@ export class HUD {
     this.rewindBtn = document.getElementById('rewindBtn');
     this.tokenEl = document.getElementById('tokenCount');
     this.muteBtn = document.getElementById('muteBtn');
-    this.restartBtn = document.getElementById('restartBtn');
+    this.pauseBtn = document.getElementById('pauseBtn');
     this.toastEl = document.getElementById('toast');
     this.overlay = document.getElementById('overlay');
     this._cache = {};
     this._toastTimer = null;
 
     this.rewindBtn.addEventListener('click', () => this.h.onRewind());
-    this.restartBtn.addEventListener('click', () => this.h.onRestart());
+    this.pauseBtn.addEventListener('click', () => this.h.onPause());
     this.muteBtn.addEventListener('click', () => {
       const muted = this.h.onMute();
       this.muteBtn.textContent = muted ? '🔇' : '🔊';
@@ -67,6 +67,24 @@ export class HUD {
       onStart?.();
     });
   }
+
+  // 一時停止メニュー。項目を配列で受け取る構造にして、
+  // 将来の追加(BGM・効果音・遊び方・タイトルへ戻る など)を容易にする
+  showPause(items) {
+    const buttons = items.map((it, i) =>
+      `<button class="${it.primary ? 'primary' : 'menu-item'}" data-menu="${i}">${it.label}</button>`).join('');
+    this.overlay.innerHTML = `
+      <div class="card">
+        <h2>⏸️ ゲームを一時停止</h2>
+        <div class="pause-menu">${buttons}</div>
+      </div>`;
+    this.overlay.classList.remove('hidden');
+    this.overlay.querySelectorAll('[data-menu]').forEach((btn) => {
+      btn.addEventListener('click', () => items[+btn.dataset.menu].action());
+    });
+  }
+
+  get overlayVisible() { return !this.overlay.classList.contains('hidden'); }
 
   showResult(score, layers, gameover = false) {
     const pct = Math.round(score.rate * 100);

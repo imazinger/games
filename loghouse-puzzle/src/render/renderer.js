@@ -472,8 +472,8 @@ export class Renderer {
         ctx.stroke();
       }
       ctx.setLineDash([]);
-      // ピース本体(左詰めでマス目に合わせる)
-      this.drawPieceBody(sx + 1, sy + 3, p.w * cellMini - 2, slotH - 6, p.type, p.berry);
+      // ピース本体(左詰めでマス目に合わせ、盤面と同じ見た目で描く)
+      this.drawPieceUnit(sx, sy + 3, p.w, cellMini, p.type, p.berry);
       ctx.restore();
     }
   }
@@ -525,12 +525,26 @@ export class Renderer {
       }
     }
 
-    // 確定済みセル
+    // 確定済みセル(ドア・窓は「つぎのピース」と同じ一体デザインでまとめて描く)
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const cellData = game.board.cell(r, c);
         if (!cellData) continue;
-        this.drawSegment(g.x + c * cell, g.y + r * cell, cell, cellData);
+        if (cellData.type === 'door' || cellData.type === 'window') {
+          const prev = c > 0 ? game.board.cell(r, c - 1) : null;
+          if (prev && prev.pid === cellData.pid) continue; // 左端セルで描画済み
+          let w = 1;
+          let berry = cellData.berry;
+          while (c + w < COLS) {
+            const n = game.board.cell(r, c + w);
+            if (!n || n.pid !== cellData.pid) break;
+            berry = berry || n.berry;
+            w++;
+          }
+          this.drawPieceBody(g.x + c * cell, g.y + r * cell, w * cell, cell, cellData.type, berry);
+        } else {
+          this.drawSegment(g.x + c * cell, g.y + r * cell, cell, cellData);
+        }
       }
     }
 
@@ -550,7 +564,7 @@ export class Renderer {
       const a = view.dropAnim;
       const t = Math.min(1, a.t / a.dur);
       const y = a.y0 + (a.y1 - a.y0) * easeInQuad(t);
-      this.drawPieceBody(a.x, y, a.piece.w * cell, cell, a.piece.type, a.piece.berry);
+      this.drawPieceUnit(a.x, y, a.piece.w, cell, a.piece.type, a.piece.berry);
     } else if (active && (game.phase === 'idle' || game.phase === 'topout')) {
       const y = this.hoverPieceY();
       const bob = view.grabbing ? 0 : Math.sin(time * 2.4) * 2;
@@ -565,7 +579,7 @@ export class Renderer {
         ctx.shadowBlur = 10;
         ctx.shadowOffsetY = 5;
       }
-      this.drawPieceBody(-w / 2, -cell / 2, w, cell, active.piece.type, active.piece.berry);
+      this.drawPieceUnit(-w / 2, -cell / 2, active.piece.w, cell, active.piece.type, active.piece.berry);
       ctx.restore();
 
       // 初回ヒント
@@ -591,12 +605,30 @@ export class Renderer {
       ctx.save();
       ctx.translate(cx, by);
       ctx.scale(sx, sy);
-      this.drawPieceBody(-w / 2, -cell, w, cell, sq.piece.type, sq.piece.berry);
+      this.drawPieceUnit(-w / 2, -cell, sq.piece.w, cell, sq.piece.type, sq.piece.berry);
       ctx.restore();
     }
   }
 
-  // 1ピース丸ごと(待機・落下・プレビュー・スカッシュ用)
+  // ピース1個ぶんの統一描画。「つぎのピース」と盤面配置後で見た目を変えない。
+  // 壁・屋根: 長さ(1〜3マス)がゲーム性に直結するため、盤面と同じセル分割デザイン
+  // ドア・窓: 2マス固定の専用パーツなので一体デザイン
+  drawPieceUnit(x, y, wCells, cellSize, type, berry) {
+    if (type === 'door' || type === 'window') {
+      this.drawPieceBody(x, y, wCells * cellSize, cellSize, type, berry);
+      return;
+    }
+    for (let i = 0; i < wCells; i++) {
+      const cap = wCells === 1 ? 'solo' : i === 0 ? 'left' : i === wCells - 1 ? 'right' : 'mid';
+      this.drawSegment(x + i * cellSize, y, cellSize, {
+        type,
+        cap,
+        berry: berry && i === Math.floor((wCells - 1) / 2),
+      });
+    }
+  }
+
+  // 1ピース丸ごとの一体デザイン(ドア・窓用)
   drawPieceBody(x, y, w, h, type, berry) {
     const { ctx } = this;
     const pal = PALETTE[type];
