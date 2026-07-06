@@ -151,7 +151,9 @@ function onRoomUpdate(room) {
   if (!online) return;
 
   if (!room) {
-    cleanupOnline({ leave: true });
+    // ルーム自体が消えているので presence 等は書き戻さない
+    sessionStorage.removeItem(SS_KEY);
+    cleanupOnline();
     mode = null;
     UI.showScreen("home");
     UI.toast("ルームが なくなったみたい…");

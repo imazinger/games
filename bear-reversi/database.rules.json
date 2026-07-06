@@ -1,0 +1,19 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$code": {
+        ".read": true,
+        ".write": true,
+        "state": {
+          "b": { ".validate": "newData.isString() && newData.val().length === 64" },
+          "turn": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2" },
+          "last": { ".validate": "newData.isNumber() && newData.val() >= -1 && newData.val() < 64" },
+          "mc": { ".validate": "newData.isNumber()" },
+          "passed": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2" }
+        }
+      }
+    }
+  }
+}
