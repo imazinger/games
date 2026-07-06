@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>bear-reversi tests</title>
+<style>body{font-family:monospace;white-space:pre;padding:16px}</style>
+</head>
+<body>
+<div id="out">running...</div>
+<script type="module">
+  import { runTests } from "./game.test.js";
+  const lines = [];
+  const push = (s) => lines.push(s);
+  const failed = runTests(push, push);
+  document.getElementById("out").textContent = lines.join("\n");
+  document.title = failed === 0 ? "PASS" : "FAIL";
+</script>
+</body>
+</html>
