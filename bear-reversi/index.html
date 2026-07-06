@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>くまリバーシ</title>
+<title>くまのリバーシ</title>
 <meta name="theme-color" content="#FBF6EC">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐻</text></svg>">
 <link rel="stylesheet" href="css/style.css">
@@ -14,17 +14,17 @@
   <!-- ホーム画面 -->
   <section id="screen-home" class="screen active">
     <div id="logo" class="logo"></div>
-    <h1>くまリバーシ</h1>
-    <p class="tagline">しろくま と 茶くま の はちみつ争奪戦</p>
+    <h1>くまのリバーシ</h1>
+    <p class="tagline">ちゃくま と しろくま の はちみつ争奪戦</p>
     <div class="menu">
-      <button id="btn-create" class="btn primary">🏠 ルームをつくる</button>
+      <button id="btn-cpu" class="btn">🏠ひとり用 ルーム</button>
+      <button id="btn-create" class="btn primary">🏘️ ふたり用 ルームをつくる</button>
       <div class="join-box">
         <input id="input-code" type="text" inputmode="latin" autocapitalize="characters"
                autocomplete="off" spellcheck="false" maxlength="4" placeholder="コード">
         <button id="btn-join" class="btn secondary">はいる</button>
       </div>
-      <button id="btn-cpu" class="btn">🐻‍❄️ しろくまと たいせん</button>
-      <button id="btn-local" class="btn ghost">📱 ひとつの端末でふたりで</button>
+      <button id="btn-local" class="btn ghost">📱 ひとつの端末をふたりであそぶ</button>
     </div>
     <p id="config-note" class="note hidden">
       オンライン対戦には Firebase の設定が必要です。<br>くわしくは README をみてね。
