@@ -104,6 +104,33 @@ export function setOfflineBanner(visible) {
   $("banner-offline").classList.toggle("hidden", !visible);
 }
 
+export function setSoundIcon(muted) {
+  const btn = $("btn-sound");
+  btn.textContent = muted ? "🔇" : "🔊";
+  btn.classList.toggle("muted", muted);
+}
+
+export function showStampBar(visible) {
+  $("stamp-bar").classList.toggle("hidden", !visible);
+}
+
+// 連打防止のクールダウン表示
+export function stampCooldown(ms) {
+  const bar = $("stamp-bar");
+  bar.classList.add("cooldown");
+  setTimeout(() => bar.classList.remove("cooldown"), ms);
+}
+
+// 送った/届いたスタンプをくまカードの上にふわっと飛ばす
+export function flyStamp(color, emoji) {
+  const panel = color === BROWN ? $("panel-brown") : $("panel-white");
+  const span = document.createElement("span");
+  span.className = "stamp-fly";
+  span.textContent = emoji;
+  panel.appendChild(span);
+  setTimeout(() => span.remove(), 1600);
+}
+
 // result: { winner: BROWN|WHITE|EMPTY, brown, white, myColor }
 export function showResult(result) {
   const bear = $("result-bear");
@@ -124,6 +151,9 @@ export function showResult(result) {
     }
   }
   $("result-score").textContent = `茶くま ${result.brown} - ${result.white} しろくま`;
+  const tally = $("result-tally");
+  tally.classList.toggle("hidden", !result.tally);
+  if (result.tally) tally.textContent = result.tally;
   $("rematch-note").classList.add("hidden");
   $("btn-rematch").disabled = false;
   $("overlay-result").classList.remove("hidden");
@@ -165,7 +195,12 @@ export function setJoinCodeInput(code) {
 export function bindButtons(handlers) {
   $("btn-create").addEventListener("click", handlers.onCreate);
   $("btn-join").addEventListener("click", handlers.onJoin);
+  $("btn-cpu").addEventListener("click", handlers.onCpu);
   $("btn-local").addEventListener("click", handlers.onLocal);
+  $("btn-sound").addEventListener("click", handlers.onToggleSound);
+  for (const btn of document.querySelectorAll(".stamp-btn")) {
+    btn.addEventListener("click", () => handlers.onStamp(btn.dataset.stamp));
+  }
   $("btn-copy-link").addEventListener("click", handlers.onCopyLink);
   $("btn-cancel-wait").addEventListener("click", handlers.onCancelWait);
   $("btn-leave").addEventListener("click", handlers.onLeave);

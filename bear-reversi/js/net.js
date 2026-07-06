@@ -50,6 +50,7 @@ export async function createRoom(initialState) {
       guestJoined: false,
       presence: { host: true, guest: false },
       rematch: { host: false, guest: false },
+      wins: { host: 0, guest: 0 },
       state: initialState,
     });
     return { code, seat: "host" };
@@ -99,9 +100,14 @@ export function subscribe(code, callback) {
   return fb.onValue(roomRef(code), (snap) => callback(snap.val()));
 }
 
-// 手を打った側が対局状態を書き込む
-export async function sendState(code, state, status) {
-  await fb.update(roomRef(code), { state, status });
+// 手を打った側が対局状態を書き込む。extra には勝敗カウントなどの追記分を渡せる
+export async function sendState(code, state, status, extra = {}) {
+  await fb.update(roomRef(code), { state, status, ...extra });
+}
+
+// スタンプを送る。最新の1件だけ保持すれば十分
+export async function sendStamp(code, seat, emoji) {
+  await fb.set(roomRef(code, "stamp"), { seat, emoji, ts: Date.now() });
 }
 
 export async function requestRematch(code, seat) {

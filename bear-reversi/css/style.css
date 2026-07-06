@@ -182,6 +182,9 @@ h1 {
 
 #room-label { color: var(--text-muted); font-size: 13px; font-weight: 700; letter-spacing: 1px; }
 
+.sound-btn { margin-left: auto; font-size: 17px; }
+.sound-btn.muted { opacity: 0.45; }
+
 .players {
   display: flex;
   align-items: stretch;
@@ -346,6 +349,47 @@ h1 {
   margin: 14px 0 0;
 }
 
+/* スタンプ */
+.stamp-bar {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.stamp-btn {
+  font-family: inherit;
+  font-size: 21px;
+  line-height: 1;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  width: 46px;
+  height: 46px;
+  cursor: pointer;
+  box-shadow: 0 2px 0 var(--border-strong);
+  transition: transform 0.08s;
+  touch-action: manipulation;
+}
+.stamp-btn:active { transform: translateY(2px) scale(0.92); box-shadow: none; }
+.stamp-bar.cooldown .stamp-btn { opacity: 0.5; pointer-events: none; }
+
+.stamp-fly {
+  position: absolute;
+  left: 50%;
+  top: -4px;
+  font-size: 28px;
+  pointer-events: none;
+  z-index: 6;
+  animation: fly-up 1.5s ease-out forwards;
+}
+
+@keyframes fly-up {
+  0% { transform: translate(-50%, 0) scale(0.4); opacity: 0; }
+  18% { transform: translate(-50%, -14px) scale(1.2); opacity: 1; }
+  100% { transform: translate(-50%, -64px) scale(1); opacity: 0; }
+}
+
 .banner {
   margin-top: 10px;
   text-align: center;
@@ -405,6 +449,17 @@ h1 {
 
 #result-title { color: var(--accent-dark); margin: 4px 0 6px; font-size: 24px; }
 #result-score { font-size: 16px; font-weight: 700; color: var(--text-muted); margin: 0 0 20px; }
+
+.result-tally {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-dark);
+  background: rgba(216, 134, 62, 0.12);
+  border-radius: 999px;
+  padding: 6px 14px;
+  display: inline-block;
+  margin: -10px 0 20px;
+}
 
 .result-buttons { display: flex; flex-direction: column; gap: 10px; }
 

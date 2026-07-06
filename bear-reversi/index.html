@@ -23,6 +23,7 @@
                autocomplete="off" spellcheck="false" maxlength="4" placeholder="コード">
         <button id="btn-join" class="btn secondary">はいる</button>
       </div>
+      <button id="btn-cpu" class="btn">🐻‍❄️ しろくまと たいせん</button>
       <button id="btn-local" class="btn ghost">📱 ひとつの端末でふたりで</button>
     </div>
     <p id="config-note" class="note hidden">
@@ -45,6 +46,7 @@
     <header class="game-header">
       <button id="btn-leave" class="icon-btn" aria-label="ホームへもどる">←</button>
       <span id="room-label"></span>
+      <button id="btn-sound" class="icon-btn sound-btn" aria-label="効果音の切り替え">🔊</button>
     </header>
     <div class="players">
       <div id="panel-brown" class="player-card">
@@ -70,6 +72,14 @@
       <div id="board" role="grid" aria-label="リバーシの盤面"></div>
     </div>
     <p id="msg" class="message">&nbsp;</p>
+    <div id="stamp-bar" class="stamp-bar hidden">
+      <button class="stamp-btn" data-stamp="🐾">🐾</button>
+      <button class="stamp-btn" data-stamp="🍯">🍯</button>
+      <button class="stamp-btn" data-stamp="❤️">❤️</button>
+      <button class="stamp-btn" data-stamp="😆">😆</button>
+      <button class="stamp-btn" data-stamp="😭">😭</button>
+      <button class="stamp-btn" data-stamp="👏">👏</button>
+    </div>
     <div id="banner-offline" class="banner hidden">あいての つうしんが きれたみたい…</div>
   </section>
 
@@ -81,6 +91,7 @@
     <div id="result-bear" class="result-bear"></div>
     <h2 id="result-title"></h2>
     <p id="result-score"></p>
+    <p id="result-tally" class="result-tally hidden"></p>
     <div class="result-buttons">
       <button id="btn-rematch" class="btn primary">🔁 もういちど</button>
       <button id="btn-home" class="btn ghost">ホームへ</button>
