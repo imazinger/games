@@ -114,6 +114,7 @@ function finishLocal() {
 /* ---------- オンライン対戦 ---------- */
 
 function attachRoom(code, seat) {
+  detachOnlineListeners();
   mode = "online";
   online = {
     code,
@@ -128,6 +129,7 @@ function attachRoom(code, seat) {
     seenSnapshot: false,
     lastStampTs: 0,
     lastStampSent: 0,
+    lastRenderKey: null,
     unsub: null,
     presenceUnsub: null,
   };
@@ -136,10 +138,18 @@ function attachRoom(code, seat) {
   online.unsub = Net.subscribe(code, onRoomUpdate);
 }
 
+function detachOnlineListeners() {
+  online?.unsub?.();
+  online?.presenceUnsub?.();
+  if (online) {
+    online.unsub = null;
+    online.presenceUnsub = null;
+  }
+}
+
 function cleanupOnline({ leave = false } = {}) {
   if (!online) return;
-  online.unsub?.();
-  online.presenceUnsub?.();
+  detachOnlineListeners();
   if (leave) {
     const removeRoom = online.seat === "host" && online.room?.status === "waiting";
     Net.leaveRoom(online.code, online.seat, { removeRoom });
@@ -231,6 +241,7 @@ function onRoomUpdate(room) {
   // 再戦開始(finished -> playing)を検知して盤を作り直す
   if (online.prevStatus === "finished" && room.status === "playing") {
     online.resultShown = false;
+    online.lastRenderKey = null;
     UI.hideResult();
     UI.resetBoardCache();
   }
@@ -247,11 +258,17 @@ function onRoomUpdate(room) {
   }
 
   const st = room.state;
-  const board = G.boardFromString(st.b);
-  UI.renderGame(
-    { board, turn: room.status === "playing" ? st.turn : G.EMPTY, last: st.last },
-    { tappable: room.status === "playing" && st.turn === myColor, myColor },
-  );
+  const renderTurn = room.status === "playing" ? st.turn : G.EMPTY;
+  const renderKey = `${st.b}|${renderTurn}|${st.last}|${room.status}|${myColor}`;
+  let board = null;
+  if (renderKey !== online.lastRenderKey) {
+    board = G.boardFromString(st.b);
+    UI.renderGame(
+      { board, turn: renderTurn, last: st.last },
+      { tappable: room.status === "playing" && st.turn === myColor, myColor },
+    );
+    online.lastRenderKey = renderKey;
+  }
 
   if (st.mc !== online.lastMc) {
     if (online.lastMc !== -1 && st.last >= 0) Sound.play("place");
@@ -286,8 +303,9 @@ function onRoomUpdate(room) {
       online.resultShown = true;
       setTimeout(() => {
         if (online?.room?.status !== "finished") return;
-        const { brown, white } = G.countStones(board);
-        const win = G.winner(board);
+        const resultBoard = board ?? G.boardFromString(st.b);
+        const { brown, white } = G.countStones(resultBoard);
+        const win = G.winner(resultBoard);
         const wins = online.room.wins || {};
         const mine = wins[online.seat] || 0;
         const theirs = wins[online.seat === "host" ? "guest" : "host"] || 0;

@@ -49,7 +49,7 @@ export function renderGame(state, opts = {}) {
     const before = prevBoard ? prevBoard[i] : EMPTY;
 
     if (now === EMPTY) {
-      cell.innerHTML = "";
+      if (cell.firstChild) cell.innerHTML = "";
     } else if (before === EMPTY || !cell.querySelector(".disc")) {
       const disc = document.createElement("div");
       disc.className = "disc" + (now === WHITE ? " show-white" : "");

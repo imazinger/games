@@ -306,14 +306,9 @@ h1 {
   inset: 34%;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.55);
-  animation: hint-pulse 1.6s ease-in-out infinite;
+  opacity: 0.8;
 }
 .cell.last { box-shadow: inset 0 0 0 3px rgba(255, 236, 160, 0.95); }
-
-@keyframes hint-pulse {
-  0%, 100% { transform: scale(0.8); opacity: 0.55; }
-  50% { transform: scale(1.05); opacity: 0.95; }
-}
 
 /* 石(くまの顔) */
 .disc {
@@ -328,7 +323,6 @@ h1 {
   inset: 0;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  filter: drop-shadow(0 2px 2px rgba(60, 40, 10, 0.3));
 }
 .disc .face svg { width: 100%; height: 100%; }
 .disc .face.white { transform: rotateY(180deg); }
@@ -431,7 +425,7 @@ h1 {
 
 .result-bear { width: 120px; margin: 0 auto 6px; position: relative; }
 .result-bear svg { width: 100%; height: auto; }
-.result-bear.winner { animation: winner-hop 0.9s ease-in-out infinite; }
+.result-bear.winner { animation: winner-hop 0.9s ease-in-out 2; }
 .result-bear .crown {
   position: absolute;
   top: -22px;
