@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#f7e3b8">
+<title>くまのフリーセル</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div id="title">🧸 くまのフリーセル</div>
+    <div id="stats">
+      <span class="stat"><span class="stat-label">スコア</span><span id="stat-score">0</span></span>
+      <span class="stat"><span class="stat-label">手数</span><span id="stat-moves">0</span></span>
+      <span class="stat"><span class="stat-label">時間</span><span id="stat-time">0:00</span></span>
+    </div>
+  </header>
+
+  <div id="board" aria-label="ゲーム盤"></div>
+
+  <nav id="toolbar">
+    <button id="btn-undo" class="tool-btn" type="button"><span class="tool-icon">↩️</span><span class="tool-label">もどす</span></button>
+    <button id="btn-hint" class="tool-btn" type="button"><span class="tool-icon">💡</span><span class="tool-label">ヒント</span></button>
+    <button id="btn-sound" class="tool-btn" type="button"><span class="tool-icon" id="sound-icon">🔊</span><span class="tool-label">おと</span></button>
+    <button id="btn-new" class="tool-btn" type="button"><span class="tool-icon">🔄</span><span class="tool-label">はじめから</span></button>
+  </nav>
+
+  <div id="loading">
+    <div class="loading-bear">🧸</div>
+    <div class="loading-text">じゅんびちゅう…</div>
+    <div class="loading-bar"><div id="loading-fill"></div></div>
+  </div>
+
+  <div id="win-overlay" class="hidden">
+    <div id="win-panel">
+      <div class="win-bear">🧸🎉</div>
+      <div class="win-title">クリア！</div>
+      <div class="win-stats">
+        <div><span>スコア</span><b id="win-score">0</b></div>
+        <div><span>手数</span><b id="win-moves">0</b></div>
+        <div><span>時間</span><b id="win-time">0:00</b></div>
+      </div>
+      <div id="win-best"></div>
+      <button id="btn-again" type="button">もういちど あそぶ</button>
+    </div>
+  </div>
+
+  <div id="confirm-overlay" class="hidden">
+    <div id="confirm-panel">
+      <div class="confirm-text">いまのゲームをやめて<br>はじめからにする？</div>
+      <div class="confirm-btns">
+        <button id="btn-confirm-no" type="button">つづける</button>
+        <button id="btn-confirm-yes" type="button">はじめから</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
