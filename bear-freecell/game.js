@@ -4,14 +4,15 @@
    くまのフリーセル
    - 4スート(Fire/Water/Leaf/Thunder) × A〜I(1〜9) + JOKER の37枚
    - タブロー6列 / フリーセル3 / 組札4
-   - タブローは「あったか(Fire/Thunder)⇔ひんやり(Water/Leaf)」
-     交互の降順で重ねる
+   - タブローはスートを問わず降順で重ねる
    - JOKERはワイルド: どこにでも置けて、上に何でも置ける
    ============================================================ */
 
 const SUITS = ["Fire", "Water", "Leaf", "Thunder"];
 const RANKS = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
 const SUIT_ICON = { Fire: "🔥", Water: "💧", Leaf: "🍃", Thunder: "⚡", JOKER: "🃏" };
+const RANK_VALUE = Object.fromEntries(RANKS.map((r, i) => [r, i + 1]));
+const SUIT_INDEX = Object.fromEntries(SUITS.map((s, i) => [s, i]));
 const COLS = 6;
 const CELLS = 3;
 const TEX_W = 320, TEX_H = 480;       // 縮小テクスチャ解像度(発熱・メモリ対策)
@@ -19,7 +20,7 @@ const SAVE_KEY = "bearFreecell.save.v1";
 const BEST_KEY = "bearFreecell.best.v1";
 const MUTE_KEY = "bearFreecell.muted";
 
-const rankVal = (r) => RANKS.indexOf(r) + 1;
+const rankVal = (r) => RANK_VALUE[r];
 const isWarm = (s) => s === "Fire" || s === "Thunder";
 
 function cardImagePath(card) {
@@ -47,6 +48,10 @@ let muted = localStorage.getItem(MUTE_KEY) === "1";
 const M = {};
 let boardRect = null;
 let slotEls = { cells: [], founds: [], colBases: [] };
+const noAnimEls = new Set();
+let noAnimRaf = null;
+let relayoutRaf = null;
+let autoSafeTimer = null;
 
 /* ============================================================
    効果音 (WebAudio・合成音のみ)
@@ -272,16 +277,32 @@ function computeLayout() {
   return pos;
 }
 
+function queueNoAnimRemoval(el) {
+  noAnimEls.add(el);
+  if (noAnimRaf) return;
+  noAnimRaf = requestAnimationFrame(() => {
+    noAnimRaf = requestAnimationFrame(() => {
+      noAnimEls.forEach((target) => target.classList.remove("no-anim"));
+      noAnimEls.clear();
+      noAnimRaf = null;
+    });
+  });
+}
+
 function applyPos(card, p, instant) {
   card.x = p.x; card.y = p.y; card.s = p.s; card.z = p.z;
   if (instant) card.el.classList.add("no-anim");
-  card.el.style.width = M.cardW + "px";
-  card.el.style.height = M.cardH + "px";
+  if (card.w !== M.cardW) {
+    card.w = M.cardW;
+    card.el.style.width = M.cardW + "px";
+  }
+  if (card.h !== M.cardH) {
+    card.h = M.cardH;
+    card.el.style.height = M.cardH + "px";
+  }
   card.el.style.transform = `translate3d(${p.x}px,${p.y}px,0) scale(${p.s})`;
   card.el.style.zIndex = p.z;
-  if (instant) {
-    requestAnimationFrame(() => requestAnimationFrame(() => card.el.classList.remove("no-anim")));
-  }
+  if (instant) queueNoAnimRemoval(card.el);
 }
 
 function positionAll(instant = false, boostSeq = null) {
@@ -300,10 +321,19 @@ function positionAll(instant = false, boostSeq = null) {
 }
 
 function relayout() {
+  if (!columns || !cells || !foundations) return;
   cancelDrag();
   computeMetrics();
   positionSlots();
   positionAll(true);
+}
+
+function scheduleRelayout() {
+  if (relayoutRaf) return;
+  relayoutRaf = requestAnimationFrame(() => {
+    relayoutRaf = null;
+    relayout();
+  });
 }
 
 /* ============================================================
@@ -311,7 +341,7 @@ function relayout() {
    ============================================================ */
 function canStack(card, onto) {
   if (card.suit === "JOKER" || onto.suit === "JOKER") return true;
-  return rankVal(card.rank) === rankVal(onto.rank) - 1 && isWarm(card.suit) !== isWarm(onto.suit);
+  return rankVal(card.rank) === rankVal(onto.rank) - 1;
 }
 function isSeq(list) {
   for (let i = 0; i < list.length - 1; i++) {
@@ -344,7 +374,6 @@ function pickableSeq(card) {
   if (loc.type === "found") return null; // 組札からは戻せない
   const seq = columns[loc.col].slice(loc.index);
   if (!isSeq(seq)) return null;
-  if (seq.length > (freeCellCount() + 1) * (emptyColCount() + 1)) return null;
   return { seq, loc };
 }
 
@@ -352,8 +381,6 @@ function pickableSeq(card) {
 function computeTargets(seq, loc) {
   const targets = [];
   const head = seq[0];
-  const free = freeCellCount();
-  const empty = emptyColCount();
 
   if (seq.length === 1) {
     if (head.suit !== "JOKER" && foundLen(head.suit) === rankVal(head.rank) - 1) {
@@ -367,9 +394,9 @@ function computeTargets(seq, loc) {
     if (loc.type === "col" && loc.col === c) continue;
     const col = columns[c];
     if (col.length === 0) {
-      if (seq.length <= (free + 1) * empty) targets.push({ type: "col", col: c, empty: true });
+      targets.push({ type: "col", col: c, empty: true });
     } else if (canStack(head, col[col.length - 1])) {
-      if (seq.length <= (free + 1) * (empty + 1)) targets.push({ type: "col", col: c, empty: false });
+      targets.push({ type: "col", col: c, empty: false });
     }
   }
   return targets;
@@ -377,7 +404,7 @@ function computeTargets(seq, loc) {
 
 function targetRect(t) {
   if (t.type === "cell") return { x: slotX(t.index), y: M.topY, w: M.slotW, h: M.slotH };
-  if (t.type === "found") return { x: slotX(CELLS + SUITS.indexOf(t.suit)), y: M.topY, w: M.slotW, h: M.slotH };
+  if (t.type === "found") return { x: slotX(CELLS + SUIT_INDEX[t.suit]), y: M.topY, w: M.slotW, h: M.slotH };
   return { x: colX(t.col), y: M.tabY, w: M.cardW, h: M.boardH - M.tabY };
 }
 
@@ -463,7 +490,7 @@ function executeUserMove(rawPick, rawTarget) {
   clearSelection();
   updateStats();
   positionAll(false, pick.seq);
-  setTimeout(autoSafeLoop, 240);
+  scheduleAutoSafeLoop(240);
 }
 
 /* 安全なカードを自動で組札へ */
@@ -491,10 +518,11 @@ function findAutoMove() {
 }
 
 function autoSafeLoop() {
+  autoSafeTimer = null;
   if (won) return;
   if (ptr && ptr.dragging) {
     // ドラッグ中は状態をいじらない
-    setTimeout(autoSafeLoop, 300);
+    scheduleAutoSafeLoop(300);
     return;
   }
   const m = findAutoMove();
@@ -512,7 +540,12 @@ function autoSafeLoop() {
   if (combo >= 2) showComboPop({ type: "found", suit: m.card.suit }, combo, gain);
   updateStats();
   positionAll(false, [m.card]);
-  setTimeout(autoSafeLoop, 170);
+  scheduleAutoSafeLoop(170);
+}
+
+function scheduleAutoSafeLoop(delay) {
+  if (autoSafeTimer) clearTimeout(autoSafeTimer);
+  autoSafeTimer = setTimeout(autoSafeLoop, delay);
 }
 
 function showComboPop(target, comboN, gain) {
@@ -530,23 +563,29 @@ function showComboPop(target, comboN, gain) {
    選択・ハイライト
    ============================================================ */
 let selection = null; // { pick, targets }
+const highlightedEls = new Set();
+
+function addHighlight(el, cls) {
+  el.classList.add(cls);
+  highlightedEls.add(el);
+}
 
 function clearHighlights() {
-  document.querySelectorAll(".hl, .hl-active").forEach((el) => el.classList.remove("hl", "hl-active"));
-  document.querySelectorAll(".hl-card, .hl-card-active").forEach((el) => el.classList.remove("hl-card", "hl-card-active"));
+  highlightedEls.forEach((el) => el.classList.remove("hl", "hl-active", "hl-card", "hl-card-active"));
+  highlightedEls.clear();
 }
 
 function highlightTargets(targets) {
   for (const t of targets) {
-    if (t.type === "cell") slotEls.cells[t.index].classList.add("hl");
+    if (t.type === "cell") addHighlight(slotEls.cells[t.index], "hl");
     else if (t.type === "found") {
       const pile = foundations[t.suit];
-      if (pile.length) pile[pile.length - 1].el.classList.add("hl-card");
-      else slotEls.founds[SUITS.indexOf(t.suit)].classList.add("hl");
+      if (pile.length) addHighlight(pile[pile.length - 1].el, "hl-card");
+      else addHighlight(slotEls.founds[SUIT_INDEX[t.suit]], "hl");
     } else {
       const col = columns[t.col];
-      if (col.length) col[col.length - 1].el.classList.add("hl-card");
-      else slotEls.colBases[t.col].classList.add("hl");
+      if (col.length) addHighlight(col[col.length - 1].el, "hl-card");
+      else addHighlight(slotEls.colBases[t.col], "hl");
     }
   }
 }
@@ -713,7 +752,7 @@ function targetHLElement(t) {
   if (t.type === "cell") return slotEls.cells[t.index];
   if (t.type === "found") {
     const pile = foundations[t.suit];
-    return pile.length ? pile[pile.length - 1].el : slotEls.founds[SUITS.indexOf(t.suit)];
+    return pile.length ? pile[pile.length - 1].el : slotEls.founds[SUIT_INDEX[t.suit]];
   }
   const col = columns[t.col];
   return col.length ? col[col.length - 1].el : slotEls.colBases[t.col];
@@ -783,7 +822,9 @@ function handleTap(el) {
     const pick = pickableSeq(card);
     if (pick) {
       select(pick);
-    } else if (findLoc(card) && findLoc(card).type !== "found") {
+    } else {
+      const loc = findLoc(card);
+      if (!loc || loc.type === "found") return;
       card.el.classList.add("shake");
       setTimeout(() => card.el.classList.remove("shake"), 500);
       sndError();
@@ -801,7 +842,7 @@ function findHint() {
     const col = columns[c];
     for (let j = 0; j < col.length; j++) {
       const seq = col.slice(j);
-      if (isSeq(seq) && seq.length <= (freeCellCount() + 1) * (emptyColCount() + 1)) {
+      if (isSeq(seq)) {
         picks.push({ seq, loc: { type: "col", col: c, index: j } });
         break; // その列で一番長い有効列だけ
       }
@@ -1014,6 +1055,10 @@ function shuffle(list) {
 }
 
 function resetState() {
+  if (autoSafeTimer) {
+    clearTimeout(autoSafeTimer);
+    autoSafeTimer = null;
+  }
   columns = Array.from({ length: COLS }, () => []);
   cells = Array(CELLS).fill(null);
   foundations = {};
@@ -1108,8 +1153,8 @@ document.getElementById("btn-confirm-yes").addEventListener("click", () => {
   newGame();
 });
 
-window.addEventListener("resize", relayout);
-if (window.visualViewport) window.visualViewport.addEventListener("resize", relayout);
+window.addEventListener("resize", scheduleRelayout);
+if (window.visualViewport) window.visualViewport.addEventListener("resize", scheduleRelayout);
 
 /* ============================================================
    起動
