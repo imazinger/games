@@ -6,81 +6,152 @@
 <title>games</title>
 <style>
   :root{
-    --bg: #FBF6EC;
-    --panel: #FFFFFF;
-    --border: #E4DCC8;
-    --border-strong: #D3C7A8;
-    --text: #4A3F2E;
-    --text-muted: #8A7F6A;
-    --accent: #D8863E;
-    --accent-dark: #A85F22;
+    --bg: #F6F0E2;
+    --panel: rgba(255,255,255,0.94);
+    --border: rgba(82,66,43,0.14);
+    --border-strong: rgba(102,82,50,0.24);
+    --text: #302C24;
+    --text-muted: #706954;
+    --accent: #D9914C;
+    --accent-dark: #7D4F2B;
+    --leaf: #496F53;
   }
   * { box-sizing: border-box; }
   body{
     margin:0;
     font-family: "Hiragino Maru Gothic ProN","Yu Gothic",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    background: var(--bg);
+    min-height: 100svh;
+    overflow-x:hidden;
+    position:relative;
+    background: linear-gradient(180deg, rgba(255,250,232,0.12), rgba(255,245,216,0.30)), url("assets/background.png") center top / cover no-repeat fixed, var(--bg);
     color: var(--text);
-    padding: 40px 16px 60px;
+    padding: clamp(30px, 8vw, 64px) 16px 60px;
   }
-  .wrap{ max-width: 720px; margin: 0 auto; }
+  .wrap{ max-width: 860px; margin: 0 auto; position:relative; z-index:1; }
   h1{
-    font-size: 26px;
+    font-size: clamp(34px, 9vw, 58px);
     font-weight: 700;
+    font-family: "Avenir Next Rounded","Nunito","Fredoka","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;
+    letter-spacing: 0;
     text-align:center;
-    margin: 4px 0 8px;
+    margin: 0 0 8px;
     color: var(--accent-dark);
+    text-shadow: 0 2px 0 rgba(255,255,255,0.74), 0 12px 32px rgba(49,70,43,0.18);
+  }
+  .mascot{
+    text-align:center;
+    font-size: 58px;
+    line-height: 1;
+    margin: 0 0 8px;
+    filter: drop-shadow(0 12px 20px rgba(58,68,42,0.20));
   }
   p.sub{
     text-align:center;
     color: var(--text-muted);
-    font-size: 14px;
-    margin: 0 0 32px;
+    font-size: clamp(15px, 4vw, 20px);
+    font-weight:600;
+    line-height:1.6;
+    max-width: 620px;
+    margin: 0 auto 20px;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.74);
   }
   .grid{
     display:grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
     gap: 16px;
+    max-width: 940px;
+    margin: 0 auto;
   }
   a.game-card{
+    position:relative;
     display:flex;
-    align-items:center;
-    gap: 14px;
-    background: var(--panel);
-    border: 1.5px solid var(--border-strong);
-    border-radius: 14px;
-    padding: 16px 18px;
+    flex-direction:column;
+    min-height: 0;
+    overflow:hidden;
+    background:
+      linear-gradient(135deg, rgba(255,255,255,0.96), var(--panel)),
+      repeating-linear-gradient(100deg, transparent 0 16px, rgba(123,82,45,0.05) 16px 18px);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 12px 12px 18px;
     text-decoration:none;
     color: var(--text);
-    box-shadow: 0 1px 3px rgba(80,60,20,0.1);
-    transition: transform 0.1s, box-shadow 0.15s;
+    box-shadow: 0 18px 36px rgba(47,62,43,0.18), inset 0 1px 0 rgba(255,255,255,0.86);
+    transition: transform 130ms ease, box-shadow 150ms ease, border-color 150ms ease;
+    will-change: transform;
   }
-  a.game-card:hover{
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(80,60,20,0.18);
+  a.game-card::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at 12% 18%, rgba(73,111,83,0.18), transparent 30%),
+      radial-gradient(circle at 92% 86%, rgba(217,145,76,0.16), transparent 32%);
+    pointer-events:none;
+  }
+  a.game-card:hover,
+  a.game-card:focus-visible{
+    transform: translateY(-4px);
+    box-shadow: 0 24px 48px rgba(47,62,43,0.22), inset 0 1px 0 rgba(255,255,255,0.9);
     border-color: var(--accent);
   }
-  .icon{
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: #F0E4CF;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    flex-shrink:0;
-    font-size: 22px;
+  a.game-card:focus-visible{
+    outline: 3px solid rgba(216,134,62,0.35);
+    outline-offset: 3px;
   }
-  .meta{ min-width:0; }
+  a.game-card:active{
+    transform: scale(0.98);
+  }
+  .thumb{
+    position:relative;
+    z-index:1;
+    width:100%;
+    aspect-ratio: 16 / 9;
+    overflow:hidden;
+    border-radius: 24px;
+    background:#E9DDC8;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.38);
+  }
+  .thumb img{
+    width:100%;
+    height:100%;
+    display:block;
+    object-fit:cover;
+    transform: scale(1.025);
+  }
+  .thumb::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(44,34,22,0.18));
+  }
+  .meta,
+  .arrow{ position:relative; z-index:1; }
+  .meta{
+    width:100%;
+    min-width:0;
+    padding: 14px 40px 0 4px;
+  }
   .meta .name{
     font-weight: 600;
-    font-size: 15px;
-    margin: 0 0 2px;
+    font-size: 18px;
+    margin: 0 0 5px;
   }
   .meta .desc{
-    font-size: 12px;
+    font-size: 13.5px;
+    line-height: 1.5;
     color: var(--text-muted);
     margin:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .arrow{
+    position:absolute;
+    right: 16px;
+    bottom: 18px;
+    color: var(--accent-dark);
+    font-size: 26px;
   }
   .empty{
     text-align:center;
@@ -94,20 +165,29 @@
     color: var(--text-muted);
     margin-top: 40px;
   }
+  @media (max-width: 520px){
+    body{ background-attachment: scroll; padding: 42px 16px 44px; }
+    h1{ font-size: 38px; }
+    .mascot{ font-size: 56px; margin-bottom: 7px; }
+    .grid{ grid-template-columns: 1fr; gap: 15px; }
+    a.game-card{ padding: 10px 10px 18px; }
+    .thumb{ border-radius: 22px; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>games</h1>
-  <p class="sub">ここに公開したミニゲームを並べています</p>
+  <div class="mascot" aria-hidden="true">🧸</div>
+  <h1>Bear Games</h1>
+  <p class="sub">森の中から、今日あそぶゲームを選ぼう</p>
   <div class="grid" id="grid"></div>
 </div>
 
 <script>
   const GAMES = [
-   { path: "bear-reversi/", icon: "🧸", name: "くまのリバーシ", desc: "ひとりでも ふたりでも遊べるオンラインリバーシ" },
-   { path: "bear-loghouse/", icon: "🧸", name: "くまのログハウス", desc: "ログハウスを建てるタイムバックパズル" },
-   { path: "bear-freecell/", icon: "🧸", name: "くまのフリーセル", desc: "37枚のカードで遊ぶソリティア" }
+   { path: "bear-reversi/", thumb: "assets/thumbnails/bear-reversi.png", name: "くまのリバーシ", desc: "ひとりでも ふたりでも遊べるオンラインリバーシ" },
+   { path: "bear-loghouse/", thumb: "assets/thumbnails/bear-loghouse.png", name: "くまのログハウス", desc: "ログハウスを建てるタイムバックパズル" },
+   { path: "bear-freecell/", thumb: "assets/thumbnails/bear-freecell.png", name: "くまのフリーセル", desc: "37枚のカードで遊ぶソリティア" }
   ];
 
   const grid = document.getElementById("grid");
@@ -119,11 +199,14 @@
       a.className = "game-card";
       a.href = g.path;
       a.innerHTML = `
-        <div class="icon">${g.icon || "🎮"}</div>
+        <div class="thumb">
+          <img src="${g.thumb}" alt="${g.name}" loading="lazy">
+        </div>
         <div class="meta">
           <p class="name">${g.name}</p>
           <p class="desc">${g.desc || ""}</p>
         </div>
+        <span class="arrow" aria-hidden="true">›</span>
       `;
       grid.appendChild(a);
     });
