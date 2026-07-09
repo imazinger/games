@@ -37,6 +37,25 @@ body {
 .screen.active { display: block; }
 .hidden { display: none !important; }
 
+.hub-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  margin-bottom: 8px;
+  padding: 0 14px;
+  color: var(--accent-dark);
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 2px 0 var(--border-strong);
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+.hub-link:active { transform: translateY(2px); box-shadow: none; }
+
 /* ---------- ホーム ---------- */
 #screen-home { text-align: center; padding-top: 8vh; }
 

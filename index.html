@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>games</title>
 <style>
   :root{
@@ -167,6 +170,32 @@
     padding-bottom: 24px;
     line-height:1.6;
   }
+  .pull-refresh{
+    position:fixed;
+    top:max(10px, env(safe-area-inset-top));
+    left:50%;
+    z-index:10;
+    transform:translate(-50%, -140%);
+    opacity:0;
+    pointer-events:none;
+    border:1px solid var(--border-strong);
+    border-radius:999px;
+    background:rgba(255,255,255,0.88);
+    color:var(--accent-dark);
+    box-shadow:0 10px 24px rgba(47,62,43,0.16);
+    font-size:12px;
+    font-weight:700;
+    padding:7px 13px;
+    transition:opacity 120ms ease, transform 120ms ease, background 120ms ease;
+  }
+  .pull-refresh.is-visible{
+    opacity:1;
+    transform:translate(-50%, 0);
+  }
+  .pull-refresh.is-ready{
+    background:rgba(255,247,225,0.94);
+    border-color:var(--accent);
+  }
   @media (max-width: 520px){
     body{ background-attachment: scroll; padding: 42px 16px 44px; }
     h1{ font-size: 38px; }
@@ -178,6 +207,7 @@
 </style>
 </head>
 <body>
+<div class="pull-refresh" id="pullRefresh" aria-live="polite" aria-hidden="true">↓ 引っ張って更新</div>
 <div class="wrap">
   <div class="mascot" aria-hidden="true">🧸</div>
   <h1>Bear Games</h1>
@@ -218,5 +248,103 @@
   <p>© 2026 Bear Games</p>
   <p>Created by Takashi Imada</p>
 </footer>
+<script>
+  (() => {
+    const pullRefresh = document.getElementById("pullRefresh");
+    if(!pullRefresh) return;
+
+    const startZone = 120;
+    const threshold = 78;
+    let startY = 0;
+    let pulling = false;
+    let ready = false;
+    let mousePulling = false;
+
+    const setPullState = (visible, isReady = false) => {
+      ready = isReady;
+      pullRefresh.classList.toggle("is-visible", visible);
+      pullRefresh.classList.toggle("is-ready", isReady);
+      pullRefresh.setAttribute("aria-hidden", visible ? "false" : "true");
+      pullRefresh.textContent = isReady ? "離して更新" : "↓ 引っ張って更新";
+    };
+
+    const refreshHub = () => {
+      setPullState(true, true);
+      pullRefresh.textContent = "更新中...";
+      const next = new URL(window.location.href);
+      if(!/\/index\.html$/i.test(next.pathname)){
+        next.pathname = next.pathname.endsWith("/") ? `${next.pathname}index.html` : `${next.pathname}/index.html`;
+      }
+      next.search = "";
+      next.hash = "";
+      next.searchParams.set("v", String(Date.now()));
+      window.location.replace(next.href);
+    };
+
+    const beginPull = (clientY) => {
+      if(window.scrollY > 0 || clientY > startZone) return false;
+      startY = clientY;
+      pulling = true;
+      ready = false;
+      return true;
+    };
+
+    const movePull = (clientY, event) => {
+      if(!pulling) return;
+      const distance = clientY - startY;
+      if(window.scrollY > 0 || distance < 12){
+        setPullState(false);
+        return;
+      }
+      event.preventDefault();
+      setPullState(true, distance >= threshold);
+    };
+
+    const endPull = () => {
+      if(!pulling) return;
+      pulling = false;
+      if(ready){
+        refreshHub();
+      } else {
+        setPullState(false);
+      }
+    };
+
+    window.addEventListener("touchstart", (event) => {
+      if(event.touches.length !== 1) return;
+      beginPull(event.touches[0].clientY);
+    }, { passive: true });
+
+    window.addEventListener("touchmove", (event) => {
+      if(!pulling || event.touches.length !== 1) return;
+      movePull(event.touches[0].clientY, event);
+    }, { passive: false });
+
+    window.addEventListener("touchend", endPull, { passive: true });
+
+    window.addEventListener("touchcancel", () => {
+      pulling = false;
+      setPullState(false);
+    }, { passive: true });
+
+    if(!("ontouchstart" in window)){
+      window.addEventListener("mousedown", (event) => {
+        if(!window.matchMedia("(max-width: 520px)").matches || event.button !== 0) return;
+        mousePulling = beginPull(event.clientY);
+      });
+
+      window.addEventListener("mousemove", (event) => {
+        if(!mousePulling) return;
+        movePull(event.clientY, event);
+      });
+
+      window.addEventListener("mouseup", () => {
+        if(!mousePulling) return;
+        mousePulling = false;
+        endPull();
+      });
+    }
+  })();
+</script>
 </body>
 </html>

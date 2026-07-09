@@ -39,6 +39,32 @@ body {
   touch-action: none;
 }
 
+#hubLink {
+  position: relative;
+  z-index: 31;
+  flex: none;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  margin: calc(8px + env(safe-area-inset-top)) 12px 4px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 250, 240, 0.92);
+  box-shadow: 0 3px 0 #8a6a42;
+  color: #4a3524;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+#hubLink:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #8a6a42;
+}
+
 /* ================= 下部バー ================= */
 #bottomBar {
   display: flex;
